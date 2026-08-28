@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "coding",
-      "description": "实现前关卡 before-build + 8 个工程维度 skill",
+      "description": "实现前关卡 before-build + 10 个工程 skill：改代码、排错、并发、复用、守卫等",
       "source": "./skills/coding",
       "skills": ["./"],
       "version": "0.1.0"

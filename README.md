@@ -46,7 +46,9 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 
 <table>
 <tr><th>类目</th><th>skill</th><th>用途</th></tr>
-<tr><td rowspan="9">coding</td><td><code>before-build</code></td><td>实现前关卡：八维度判断记录，确认后动手</td></tr>
+<tr><td rowspan="11">coding</td><td><code>before-build</code></td><td>实现前关卡：八维度判断记录，确认后动手</td></tr>
+<tr><td><code>change-safely</code></td><td>改已有代码：先说影响面，不顺手重构，按步 commit，附验收命令</td></tr>
+<tr><td><code>debug-root-cause</code></td><td>先复现再定位，修根因，加回归检查</td></tr>
 <tr><td><code>build-vs-buy</code></td><td>先查 SDK / 库 / 成品，压缩自研范围</td></tr>
 <tr><td><code>ssot-reuse</code></td><td>一处定义，主动抽象，接口优先</td></tr>
 <tr><td><code>concurrency-modeling</code></td><td>并发与竞态：状态机 / 幂等键 / event-driven</td></tr>
