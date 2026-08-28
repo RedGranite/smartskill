@@ -2,7 +2,7 @@
   "name": "smartskill",
   "owner": { "name": "RedGranite" },
   "metadata": {
-    "description": "给想读懂并长期维护自己项目的人：动手前先判断，改代码先画影响面，交付时指出哪段值得完全理解",
+    "description": "给想读懂并长期维护自己项目的人：动手前先判断，改代码先画影响面，交付时指出哪段值得完全理解。按类目自选",
     "version": "0.1.0"
   },
   "plugins": [
