@@ -51,7 +51,7 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 <tr><td><code>ssot-reuse</code></td><td>一处定义，主动抽象，接口优先</td></tr>
 <tr><td><code>concurrency-modeling</code></td><td>并发与竞态：状态机 / 幂等键 / event-driven</td></tr>
 <tr><td><code>engineering-review</code></td><td>异常路径、状态一致性、可观测性、tech debt</td></tr>
-<tr><td><code>spec-first</code></td><td>六节 spec：目标 / 非目标 / 接口 / 状态 / critical path / 验证</td></tr>
+<tr><td><code>spec-first</code></td><td>按需取六节的 spec：目标 / 非目标 / 接口 / 状态 / critical path / 验证</td></tr>
 <tr><td><code>guardrails</code></td><td>lint / 类型 / CI / e2e 把规则确定化</td></tr>
 <tr><td><code>minimal-viable</code></td><td>MVP 推进，验证只做一次</td></tr>
 <tr><td><code>powershell-utf8</code></td><td>Windows 会话语法与编码预设</td></tr>
