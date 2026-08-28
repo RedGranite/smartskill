@@ -14,6 +14,7 @@ metadata:
 ## 硬规则
 - MUST 每条规范先问"能否机器判定"：能则写成 lint rule / 类型约束 / schema / CI check，不写进文档让人记。
 - MUST critical path 有 e2e test，至少能本地一条命令跑；有 CI 则必跑。
+- MUST 写成组测试前先说明目的与影响：锁定哪些行为、以后改逻辑要同步改哪些测试；用户确认逻辑已完整再写。业务还在打磨时只用验收命令（见 change-safely），不写全量测试。
 - MUST 环境可复现：依赖锁定版本，一条命令启动；密钥只走环境变量，`.env` 进 gitignore 且有 `.env.example`。
 - MUST 状态机合法转移用代码约束（枚举 + 转移表 + 断言），非法转移直接抛错。
 - MUST 确定性优先：同样输入同样输出；随机、时间、环境依赖注入化。
@@ -30,6 +31,8 @@ metadata:
 ## 反模式
 - 错误：README 写"请勿直接修改 status 字段"。→ 正确：status 只能经 `transition(from, to)` 改，其他写入被类型或 lint 拦。
 - 错误：review 反复提醒"记得处理 None"。→ 正确：开 strict 类型检查，未处理直接失败。
+- 错误：逻辑还在改，先补 40 个单元测试，改一次逻辑改一次测试。→ 正确：打磨期只留一条验收命令；逻辑定稿后说"这组测试锁定下单与退款流程，以后改流程要同步改"，确认后再写。
+- 错误：测试把实现抄一遍：`assert add(2,3) == 2+3`。→ 正确：断言契约：`assert add(2,3) == 5`；测试名写行为 `test_refund_over_total_is_rejected`。
 - 错误：e2e 靠人记得手动跑。→ 正确：一条命令 `npm run e2e`；有 CI 则失败阻断合并。
 - 错误：API key 写在代码里，`.env` 提交进仓库。→ 正确：代码只读 `process.env.KEY`，`.env` 在 gitignore，`.env.example` 列出需要哪些变量。
 
