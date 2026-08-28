@@ -1,0 +1,31 @@
+{
+  "name": "smartskill",
+  "owner": { "name": "RedGranite" },
+  "metadata": {
+    "description": "动手前把问题想清楚的 Agent Skills：coding 关卡、写作标准、搜索源分流",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "coding",
+      "description": "实现前关卡 before-build + 8 个工程维度 skill",
+      "source": "./skills/coding",
+      "skills": ["./"],
+      "version": "0.1.0"
+    },
+    {
+      "name": "thinking",
+      "description": "doc-writing、decision-analysis、plain-language",
+      "source": "./skills/thinking",
+      "skills": ["./"],
+      "version": "0.1.0"
+    },
+    {
+      "name": "search",
+      "description": "第三方搜索 skill / MCP 目录与分流",
+      "source": "./skills/search",
+      "skills": ["./"],
+      "version": "0.1.0"
+    }
+  ]
+}
