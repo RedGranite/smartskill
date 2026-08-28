@@ -13,24 +13,20 @@ metadata:
 
 ## 硬规则
 - MUST 会话第一条命令前执行编码预设（见输出要求）。
-- MUST 用 PowerShell 7 语法：命令链 `;` 或 `&&`；变量 `$x`；子表达式 `$(...)`；插值 `"$($obj.Prop)"`。
-- NEVER 混入 bash：`export`、`[ -f x ]`、`for x in *`、backtick 命令替换、`2>/dev/null`（用 `2>$null`）。
-- MUST 含空格路径加引号；调用含空格路径的 exe 用 `& "path" args`。
-- MUST 多行字符串用 here-string `@'...'@`（字面）或 `@"..."@`（插值），结束符顶格。
-- MUST 写文件指定 `-Encoding utf8NoBOM`；Windows PowerShell 5 用 `[IO.File]::WriteAllText(path, text, (New-Object Text.UTF8Encoding $false))`。
-- MUST Python 子进程设 `PYTHONIOENCODING=utf-8`；git 设 `core.quotepath false`。
+- MUST 先看 `$PSVersionTable`：PowerShell 5 无 `&&`、无 `utf8NoBOM`、`>` 重定向写 UTF-16；写文件改用 `[IO.File]::WriteAllText(path, text, (New-Object Text.UTF8Encoding $false))`。
+- NEVER 混入 bash 语法（`export`、`[ -f ]`、backtick 命令替换、`2>/dev/null`）。
+- MUST 给 python / git 子进程设编码：`PYTHONIOENCODING=utf-8`、`core.quotepath false`。
 - NEVER 对已存在文件用 `New-Item -Force`（会清空）。
 
 ## 审问清单
-1. 当前是 pwsh 7 还是 Windows PowerShell 5？（`$PSVersionTable.PSVersion`）
+1. 当前是 pwsh 7 还是 Windows PowerShell 5？
 2. 编码预设执行了吗？
 3. 这条命令里有 bash 语法吗？
 4. 输出含中文吗？管道另一端（python / node / git）的编码设了吗？
-5. 写文件时给编码参数了吗？
+5. 写文件时给编码参数了吗？here-string 结束符顶格了吗？
 
 ## 反模式
-- 错误：`export FOO=1 && python x.py`。→ 正确：`$env:FOO='1'; python x.py`。
-- 错误：`echo "中文" > out.txt`（PowerShell 5 写成 UTF-16）。→ 正确：`"中文" | Set-Content out.txt -Encoding utf8NoBOM`。
+- 错误：`echo "中文" > out.txt`（PowerShell 5 写成 UTF-16）。→ 正确：`"中文" | Set-Content out.txt -Encoding utf8NoBOM`；PowerShell 5 用 `WriteAllText`。
 - 错误：python 打印中文报 `UnicodeEncodeError: 'gbk'`。→ 正确：先 `$env:PYTHONIOENCODING='utf-8'`。
 
 ## 输出要求
