@@ -40,7 +40,7 @@ git clone https://github.com/RedGranite/smartskill; cd smartskill
 贴进 `CLAUDE.md` / `AGENTS.md` / `DSH.md` / `SOUL.md`，让关卡与平台预设在会话开头生效：
 
 ```
-- 进入实现阶段（脚手架、demo、首次写代码）前，先执行 skill `before-build`，产出判断记录并经我确认。
+- 进入实现阶段（脚手架、demo、首次写代码）前，先执行 skill `before-build`，在回复里产出判断记录并经我确认。
 - Windows 会话第一条命令前，先执行：`$u=[Text.Encoding]::UTF8; [Console]::OutputEncoding=$u; [Console]::InputEncoding=$u; $OutputEncoding=$u; $env:PYTHONIOENCODING='utf-8'`；命令一律用 PowerShell 7 语法，细则见 skill `powershell-utf8`。
 ```
 
