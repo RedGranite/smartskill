@@ -55,9 +55,10 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 <tr><td><code>guardrails</code></td><td>lint / 类型 / CI / e2e 把规则确定化</td></tr>
 <tr><td><code>minimal-viable</code></td><td>MVP 推进，验证只做一次</td></tr>
 <tr><td><code>powershell-utf8</code></td><td>Windows 会话语法与编码预设</td></tr>
-<tr><td rowspan="3">thinking</td><td><code>doc-writing</code></td><td>文档写作标准</td></tr>
+<tr><td rowspan="4">thinking</td><td><code>doc-writing</code></td><td>文档写作标准</td></tr>
 <tr><td><code>decision-analysis</code></td><td>有标准、有证据的方案取舍</td></tr>
 <tr><td><code>plain-language</code></td><td>中文表达，去 AI 味</td></tr>
+<tr><td><code>context-legibility</code></td><td>长程任务：每轮可独立读懂，不输出无效结论</td></tr>
 <tr><td>search</td><td><code>search-sources</code></td><td>第三方搜索源目录与分流，见下节</td></tr>
 </table>
 
