@@ -7,9 +7,12 @@
 **任意 CLI（需 Node）**
 
 ```bash
-npx skills add RedGranite/smartskill                      # 交互选择
-npx skills add RedGranite/smartskill -s before-build -a codex
+npx skills add RedGranite/smartskill                         # 交互选择
+npx skills add RedGranite/smartskill -s before-build -a codex -g   # 单个，装到用户级
+npx skills add https://github.com/RedGranite/smartskill/tree/main/skills/coding   # 整类
 ```
+
+不加 `-g` 装到项目级 `.agents/skills`；`-g` 装到该 CLI 的用户级目录。
 
 **Claude Code 整类安装**
 
@@ -63,12 +66,14 @@ git clone https://github.com/RedGranite/smartskill; cd smartskill
 
 | CLI | skill 目录（user） | 实测 |
 |---|---|---|
-| Claude Code | `~/.claude/skills` | 待实测 |
-| Codex | `~/.codex/skills` | 待实测 |
-| DeepSeek Harness | `~/.dsh/skills`、`~/.agents/skills` | 待实测 |
+| Claude Code | `~/.claude/skills` | 2026-08-28 实测：脚本 + marketplace 均可 |
+| Codex | `~/.codex/skills` | 2026-08-28 实测：脚本 + `npx skills` 均可 |
+| DeepSeek Harness | `~/.dsh/skills`、`~/.agents/skills` | 2026-08-28 实测：脚本可 |
 | OpenCode | `~/.config/opencode/skills` | 未实测，按官方文档 |
 | Pi | `~/.pi/agent/skills` | 未实测，按官方文档 |
 | Hermes Agent | `~/.hermes/skills` | 未实测，按官方文档 |
+
+`search-sources` 推荐的搜索源多为 MCP。Pi 官方不支持 MCP，其上只能用 skill 型源（Exa、arXiv、Context7），详见 `skills/search/search-sources/references/install-mcp.md`。
 
 ## 贡献
 
