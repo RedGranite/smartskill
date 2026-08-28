@@ -1,6 +1,15 @@
 # smartskill
 
-让 agent 在动手之前把问题想清楚的 Agent Skills。三个组件，按需安装到 Claude Code、Codex、OpenCode、Pi、Hermes Agent、DeepSeek Harness。
+给想读懂并长期维护自己项目的人。你有编程思维，未必熟悉每一行怎么写，但要像工程师一样掌控 AI 生成的代码。
+
+这套 skill 让 agent：
+
+- 动手前先判断自研边界、复用、并发、异常路径，写成判断记录，经你确认再写代码
+- 改已有代码先画影响面，不顺手重构，改数据只出脚本不直接执行，每一步一个能回滚的 commit
+- 交付时指出哪段代码值得你完全理解、哪段只需知道契约；不降级、不比喻，浅显靠准确
+- 长程任务里每一轮都能独立读懂进度，不输出无效结论，不为总结而总结
+
+三个组件，按需安装到 Claude Code、Codex、OpenCode、Pi、Hermes Agent、DeepSeek Harness。
 
 ## 安装
 

@@ -2,7 +2,7 @@
   "name": "smartskill",
   "owner": { "name": "RedGranite" },
   "metadata": {
-    "description": "动手前把问题想清楚的 Agent Skills：coding 关卡、写作标准、搜索源分流",
+    "description": "给想读懂并长期维护自己项目的人：动手前先判断，改代码先画影响面，交付时指出哪段值得完全理解",
     "version": "0.1.0"
   },
   "plugins": [
