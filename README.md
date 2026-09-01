@@ -41,7 +41,7 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 
 ```
 - 进入实现阶段（脚手架、demo、首次写代码）前，先执行 skill `before-build`，在回复里产出判断记录并经我确认。
-- Windows 会话第一条命令前，先执行：`$u=[Text.Encoding]::UTF8; [Console]::OutputEncoding=$u; [Console]::InputEncoding=$u; $OutputEncoding=$u; $env:PYTHONIOENCODING='utf-8'`；命令一律用 PowerShell 7 语法，细则见 skill `powershell-utf8`。
+- Windows 会话第一条命令前，先执行：`$u=[Text.Encoding]::UTF8; [Console]::OutputEncoding=$u; [Console]::InputEncoding=$u; $OutputEncoding=$u; if(-not $env:PYTHONIOENCODING){$env:PYTHONIOENCODING='utf-8'}`；命令一律用 PowerShell 7 语法，细则见 skill `powershell-utf8`。
 ```
 
 ## Skill 索引
