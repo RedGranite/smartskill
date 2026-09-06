@@ -37,11 +37,10 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 
 ## 注入片段
 
-贴进 `CLAUDE.md` / `AGENTS.md` / `DSH.md` / `SOUL.md`，让关卡与平台预设在会话开头生效：
+贴进 `CLAUDE.md` / `AGENTS.md` / `DSH.md` / `SOUL.md`，让实现前关卡生效：
 
 ```
 - 进入实现阶段（脚手架、demo、首次写代码）前，先执行 skill `before-build`，在回复里产出判断记录并经我确认。
-- Windows 会话执行命令时使用 PowerShell 7，并先使用 skill `powershell-utf8`。编码规则只在该 Skill 中维护，不在这里复制。
 ```
 
 ## Skill 索引
@@ -58,7 +57,7 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 <tr><td><code>spec-first</code></td><td>按需取六节的 spec：目标 / 非目标 / 接口 / 状态 / critical path / 验证</td></tr>
 <tr><td><code>guardrails</code></td><td>lint / 类型 / CI / e2e 把规则确定化</td></tr>
 <tr><td><code>minimal-viable</code></td><td>MVP 推进，验证只做一次</td></tr>
-<tr><td><code>powershell-utf8</code></td><td>Windows 会话语法与编码预设</td></tr>
+<tr><td><code>powershell-utf8</code></td><td>Windows 编码问题排查</td></tr>
 <tr><td rowspan="4">thinking</td><td><code>doc-writing</code></td><td>文档写作标准</td></tr>
 <tr><td><code>decision-analysis</code></td><td>有标准、有证据的方案取舍</td></tr>
 <tr><td><code>plain-language</code></td><td>中文表达，去 AI 味</td></tr>
