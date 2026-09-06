@@ -36,3 +36,38 @@ cp -R "$ROOT/skills/coding/before-build" 'repository with spaces/skills/coding/'
 output=$(bash "$test_root/repository with spaces/install.sh" --component coding --scope project --dry-run)
 [[ $output == *'[dry-run] before-build -> '* && ! -e .agents ]]
 echo 'PASS: invalid values, missing values, exact agent matching, preflight validation, dry-run, spaced paths'
+
+bash "$ROOT/install.sh" --scope project --skill before-build
+installed="$test_root/.agents/skills/before-build"
+echo 'local customization' > "$installed/local-note.txt"
+echo 'local edit' >> "$installed/SKILL.md"
+cp "$installed/SKILL.md" "$test_root/old-skill.md"
+cp() { echo 'Injected copy failure' >&2; return 1; }
+export -f cp
+if bash "$ROOT/install.sh" --scope project --skill before-build; then
+  echo 'FAIL: copy failure reported success' >&2; exit 1
+fi
+unset -f cp
+[[ -f $installed/local-note.txt ]] || { echo 'FAIL: copy failure removed the old installation' >&2; exit 1; }
+cmp "$installed/SKILL.md" "$test_root/old-skill.md"
+
+mv() {
+  if [[ $1 == */.smartskill-install.*/* ]]; then echo 'Injected activation failure' >&2; return 1; fi
+  command mv "$@"
+}
+export -f mv
+if bash "$ROOT/install.sh" --scope project --skill before-build; then
+  echo 'FAIL: activation failure reported success' >&2; exit 1
+fi
+unset -f mv
+cmp "$installed/SKILL.md" "$test_root/old-skill.md"
+[[ -f $installed/local-note.txt ]]
+
+bash "$ROOT/install.sh" --scope project --skill before-build
+cmp "$installed/SKILL.md" "$ROOT/skills/coding/before-build/SKILL.md"
+[[ ! -e $installed/local-note.txt ]]
+backups=("$test_root"/.agents/smartskill-backups/before-build.*)
+[[ ${#backups[@]} == 1 && -f ${backups[0]}/before-build/local-note.txt ]]
+cmp "${backups[0]}/before-build/SKILL.md" "$test_root/old-skill.md"
+for stage in "$test_root"/.agents/.smartskill-install.*; do [[ ! -e $stage ]]; done
+echo 'PASS: initial install, failed copy, failed activation, clean update, retained local edits'

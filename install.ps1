@@ -56,15 +56,41 @@ foreach ($a in $Agent) {
 
     foreach ($s in $selected) {
         $to = Join-Path $dest $s.Name
-        $note = if (Test-Path $to) { '(覆盖)' } else { '' }
+        $note = if (Test-Path -LiteralPath $to) { '(备份后替换)' } else { '' }
 
         if ($DryRun) {
             Write-Host "[dry-run] $($s.Name) -> $to $note"
             continue
         }
         New-Item -ItemType Directory -Force -Path $dest | Out-Null
-        if ($note) { Remove-Item -Recurse -Force $to }
-        Copy-Item -Recurse $s.FullName $to
-        Write-Host "$($s.Name) -> $to $note"
+        $parent = Split-Path $dest -Parent
+        $id = [guid]::NewGuid().ToString('N')
+        $stage = Join-Path $parent ".smartskill-install-$id"
+        $backup = $null
+        New-Item -ItemType Directory -Path $stage | Out-Null
+        try {
+            Copy-Item -Recurse -LiteralPath $s.FullName -Destination $stage
+            if (Test-Path -LiteralPath $to) {
+                $backupSlot = Join-Path (Join-Path $parent 'smartskill-backups') "$($s.Name).$id"
+                New-Item -ItemType Directory -Path $backupSlot | Out-Null
+                $backup = Join-Path $backupSlot $s.Name
+                [IO.Directory]::Move($to, $backup)
+            }
+            try {
+                [IO.Directory]::Move((Join-Path $stage $s.Name), $to)
+            } catch {
+                $installError = $_
+                if ($backup) {
+                    try { [IO.Directory]::Move($backup, $to) }
+                    catch { throw "安装失败，旧版本保留在 $backup；恢复失败：$($_.Exception.Message)" }
+                    Remove-Item -LiteralPath $backupSlot
+                }
+                throw $installError
+            }
+            Write-Host "$($s.Name) -> $to $note"
+            if ($backup) { Write-Host "备份 -> $backup" }
+        } finally {
+            Remove-Item -LiteralPath $stage -Recurse -Force
+        }
     }
 }

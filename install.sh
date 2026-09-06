@@ -71,8 +71,30 @@ fi
 for dest in "${destinations[@]}"; do
   for s in "${selected[@]}"; do
     name=$(basename "$s"); to="$dest/$name"; note=""
-    [[ -e $to ]] && note="(覆盖)"
+    [[ -e $to || -L $to ]] && note="(备份后替换)"
     if [[ $DRY == 1 ]]; then echo "[dry-run] $name -> $to $note"; continue; fi
-    mkdir -p "$dest"; rm -rf "$to"; cp -R "$s" "$to"; echo "$name -> $to $note"
+    (
+      mkdir -p "$dest"
+      parent=$(cd "$dest/.." && pwd)
+      stage=$(mktemp -d "$parent/.smartskill-install.XXXXXX")
+      trap 'rm -rf "$stage"' EXIT
+      cp -R "$s" "$stage/$name"
+      backup=""
+      if [[ -e $to || -L $to ]]; then
+        mkdir -p "$parent/smartskill-backups"
+        backup_slot=$(mktemp -d "$parent/smartskill-backups/$name.XXXXXX")
+        backup="$backup_slot/$name"
+        mv "$to" "$backup"
+      fi
+      if ! mv "$stage/$name" "$dest/"; then
+        if [[ -n $backup ]]; then
+          if ! mv "$backup" "$dest/"; then echo "安装失败，旧版本保留在 $backup" >&2; exit 1; fi
+          rmdir "$backup_slot"
+        fi
+        exit 1
+      fi
+      echo "$name -> $to $note"
+      if [[ -n $backup ]]; then echo "备份 -> $backup"; fi
+    )
   done
 done

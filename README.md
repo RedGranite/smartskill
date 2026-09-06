@@ -41,6 +41,8 @@ npx skills add RedGranite/smartskill -a opencode -g    # -a 可选 opencode / pi
 ./install.sh --component coding --agent dsh,hermes     # macOS / Linux
 ```
 
+仓库脚本先暂存新版本，再备份并替换已有 Skill；复制失败保留原安装，替换失败尝试恢复旧版。备份包含本地修改，保存在目标 `skills` 的同级 `smartskill-backups` 目录，脚本打印具体路径，确认不再需要后自行删除。每个 Skill 单独更新，后续失败不会撤销前面已完成的更新；中断后可从备份恢复。
+
 去掉 `-g` 装到当前项目的 `.agents/skills`。更新即重跑。
 
 ## 注入片段

@@ -17,6 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
       - run: node herdr/spinner/spinner.test.js
+      - run: ./scripts/test_install.ps1
       - run: ./herdr/merge-left.ps1 -SelfTest
       - run: ./herdr/codex-agent-name.ps1 -SelfTest -InputJson '{"model":"gpt-5.6-sol","model_reasoning_effort":"high"}'
         env:
