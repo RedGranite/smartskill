@@ -4,6 +4,14 @@
 
 16 个 skill，按类目或单个自选，装到 Claude Code、Codex、OpenCode、Pi、Hermes Agent、DeepSeek Harness。
 
+## 结构
+
+| 目录 | 用途 |
+| --- | --- |
+| `skills/` | 核心 Skill 规则，按类目组织 |
+| `scripts/` | 仓库校验工具；安装使用根目录的 `install.ps1` / `install.sh` |
+| [`herdr/`](herdr/) | Herdr 配置指南与配套脚本，按目录说明安装和使用 |
+
 ## 安装
 
 **1. Claude Code**
