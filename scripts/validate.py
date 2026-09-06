@@ -24,6 +24,8 @@ def frontmatter(text: str) -> dict:
 
 def check(skill_dir: Path) -> list:
     md = skill_dir / "SKILL.md"
+    if not md.is_file():
+        return ["SKILL.md 缺失"]
     fm = frontmatter(md.read_text(encoding="utf-8"))
     if not fm:
         return ["frontmatter 缺失"]
@@ -37,10 +39,18 @@ def check(skill_dir: Path) -> list:
 
 
 def main(root: str) -> int:
+    root_path = Path(root)
+    if not root_path.is_dir():
+        print(f"validate: FAIL: 目录不存在: {root}")
+        return 1
+    skill_dirs = sorted(p for p in root_path.glob("*/*") if p.is_dir())
+    if not skill_dirs:
+        print(f"validate: FAIL: 未找到 skill 目录: {root}")
+        return 1
     rc = 0
-    for md in sorted(Path(root).glob("*/*/SKILL.md")):
-        for p in check(md.parent):
-            print(f"{md.parent.as_posix()}: {p}")
+    for skill_dir in skill_dirs:
+        for p in check(skill_dir):
+            print(f"{skill_dir.as_posix()}: {p}")
             rc = 1
     print("validate: OK" if rc == 0 else "validate: FAIL")
     return rc

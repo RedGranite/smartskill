@@ -8,6 +8,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: python scripts/validate.py
+      - run: python scripts/test_validate.py
   herdr:
     runs-on: windows-latest
     steps:
