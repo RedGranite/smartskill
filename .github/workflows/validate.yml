@@ -9,6 +9,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: python scripts/validate.py
       - run: python scripts/test_validate.py
+      - run: bash scripts/test_install.sh
   herdr:
     runs-on: windows-latest
     steps:
