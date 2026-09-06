@@ -54,7 +54,12 @@ agent_panel_sort = "spaces"
 show_agent_labels_on_pane_borders = true
 
 [ui.sidebar.agents]
-rows = [["state_icon", "workspace", { token = "tab", bold = true }], ["agent"]]
+row_gap = 0
+rows = [
+  ["state_icon", { token = "workspace", fg = "#89b4fa", bold = true, dim = false }],
+  [{ token = "tab", fg = "#b8bdc7", bold = true, dim = false }],
+  [{ token = "agent", fg = "#7c828c", bold = false, dim = false }],
+]
 
 [keys]
 previous_agent = "prefix+up"
@@ -74,6 +79,24 @@ type = "shell"
 command = 'pwsh.exe -NoProfile -NonInteractive -WindowStyle Hidden -File "%APPDATA%\herdr\merge-left.ps1" -NewTab 1> "%APPDATA%\herdr\detach-tab-error.log" 2>&1'
 description = "当前分屏恢复为独立标签页"
 ```
+
+### Agents 面板布局与配色
+
+展开的桌面侧栏中，每个条目按三行显示：
+
+| 行 | 内容 | 显示方式 |
+| --- | --- | --- |
+| 第一行 | 状态图标、项目名（`workspace`） | 项目名浅蓝、加粗 |
+| 第二行 | session 总结，即标签页名称（`tab`） | 浅灰、加粗 |
+| 第三行 | 模型、effort 与 pane 后缀，即命名 hook 生成的 `agent` | 中灰、不加粗、不淡化 |
+
+模型名独占一行，减少与项目名挤在同一行造成的末尾截断；侧栏过窄时仍可能截断。配色值统一写在上面的 TOML 中。
+
+`row_gap = 0` 取消条目之间的空白行，三行内容本身不受影响。改为 `1` 会在条目之间增加一整行。该参数不能把空行压成半行高，token 样式也没有独立字号设置。
+
+当前核对的配置提供 `fg`、`bold`、`dim`，未提供按项目自动配色或项目组分割线的选项。`rows_by_agent` 按 `codex`、`claude` 等 agent 类型覆盖布局，不按项目区分。这些布局只影响展开的桌面侧栏，折叠和移动端保留紧凑布局。[Herdr 侧栏配置说明](https://herdr.dev/docs/configuration/#sidebar-row-layouts)
+
+### 快捷键行为
 
 这里的 `type = "shell"` 在后台运行脚本。Windows 的自定义命令经过 `cmd.exe /d /c`，因此配置字符串中的 `%APPDATA%` 是有意使用的 CMD 环境变量语法；脚本本体由 `pwsh.exe` 执行。[Herdr 配置说明](https://herdr.dev/docs/configuration/#terminal-defaults)
 
@@ -203,9 +226,11 @@ pane 移动后，进程继承的 `HERDR_TAB_ID` 仍可能指向旧标签页。�
 & $env:HERDR_BIN_PATH integration install claude
 ```
 
-Herdr 配置重载命令：
+先检查配置，通过后再重载：
 
 ```powershell
+& $env:HERDR_BIN_PATH config check
+if ($LASTEXITCODE -ne 0) { throw 'Herdr config check failed' }
 & $env:HERDR_BIN_PATH server reload-config
 ```
 
@@ -218,6 +243,7 @@ Herdr 配置重载命令：
 | 项目 | 验收方式 | 预期 |
 | --- | --- | --- |
 | 官方 integration | `herdr integration status` | Codex / Claude 显示 `current` |
+| Agents 面板 | 展开桌面侧栏，检查项目名、总结和模型名 | 三行显示，无额外空行；配色与示例一致，模型名独占一行 |
 | 自定义按键 | 在 Herdr 按 `Ctrl+B → ?` 查看，再使用方向键切换 | 绑定与本文表格一致 |
 | 移动脚本内部检查 | 运行下面的 `-SelfTest` | `PASS: tab order, first tab, missing tab` |
 | Codex 命名 | 运行下面的 `-SelfTest` | 显示计算出的名称及检查结果，不执行改名 |
