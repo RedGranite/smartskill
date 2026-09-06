@@ -29,7 +29,7 @@ metadata:
 | spec | 接口、状态、critical path、非目标写清了吗？ | spec-first |
 | 守卫 | 哪些规则应确定化：lint、CI、e2e、状态机约束？ | guardrails |
 | MVP | 边界在哪？edge case 与复杂度如何取舍？验证做哪几项？ | minimal-viable |
-| 平台 | Windows 会话？PowerShell 语法与 UTF-8 已预设？ | powershell-utf8 |
+| 平台 | 当前平台有哪些已知兼容问题？已出现编码异常时再排查。 | powershell-utf8 |
 
 ## 反模式
 - 错误：brainstorm 完直接起项目，并发问题上线后暴露。→ 正确：先答"同一订单状态会被支付回调和用户操作同时改吗"，答"会"就先定状态机。

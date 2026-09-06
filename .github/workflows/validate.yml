@@ -8,3 +8,14 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: python scripts/validate.py
+  herdr:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: node herdr/spinner/spinner.test.js
+      - run: ./herdr/merge-left.ps1 -SelfTest
+      - run: ./herdr/codex-agent-name.ps1 -SelfTest -InputJson '{"model":"gpt-5.6-sol","model_reasoning_effort":"high"}'
+        env:
+          HERDR_PANE_ID: test:p1
