@@ -20,7 +20,7 @@
 
 文件只写入一次，不代表运行时只执行一次。仅复制 Herdr 配置和 Markdown 规则，无法代替被它们引用的脚本与 hook 注册。
 
-Agents 面板的可选工作动画见 [Windows Agent Spinner](spinner/README.md)，使用显示 metadata，并保留原生状态圆点。
+Agents 面板的可选工作动画见 [Windows Agent Spinner](spinner/README.md)，使用显示 metadata，在同一个位置切换工作动画与静态状态标记。
 
 ## 文件位置与归属
 

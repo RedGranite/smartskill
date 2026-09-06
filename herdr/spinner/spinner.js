@@ -9,6 +9,8 @@ const { createHash } = require("node:crypto");
 const { setTimeout: sleep } = require("node:timers/promises");
 const SOURCE = "smartskill.spinner";
 const FRAMES = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
+const STATIC_MARKS = { blocked: "●", done: "●", idle: "○", unknown: "·" };
+const EMPTY_TOKENS = Object.fromEntries(["spin", ...Object.keys(STATIC_MARKS).map((state) => `spin_${state}`)].map((key) => [key, null]));
 const TTL_MS = 2000;
 
 function intervalFrom(config) {
@@ -50,9 +52,13 @@ function createAnimation(call) {
   let working = [];
   let tick = 0;
   const written = new Set();
-  const report = (pane, glyph) => call("pane.report_metadata", {
-    pane_id: pane, source: SOURCE, tokens: { spin: glyph }, ttl_ms: TTL_MS,
-  });
+  async function report(pane, glyph, key = "spin") {
+    // Set one mark and clear the other states atomically: one visible slot.
+    await call("pane.report_metadata", {
+      pane_id: pane, source: SOURCE, tokens: { ...EMPTY_TOKENS, [key]: glyph }, ttl_ms: TTL_MS,
+    });
+    written.add(pane);
+  }
   async function clear(pane) {
     await report(pane, null);
     written.delete(pane);
@@ -62,18 +68,27 @@ function createAnimation(call) {
       working = []; // A failed snapshot must never keep the last working set.
       const result = await call("session.snapshot");
       if (!Array.isArray(result?.snapshot?.agents)) throw new Error("Missing snapshot.agents");
-      const next = result.snapshot.agents
+      const agents = result.snapshot.agents;
+      if (agents.some((agent) => typeof agent.pane_id !== "string" || !agent.pane_id ||
+        (agent.agent_status !== "working" && !Object.hasOwn(STATIC_MARKS, agent.agent_status)))) {
+        throw new Error("Invalid pane id or agent status");
+      }
+      const next = agents
         .filter((agent) => agent.agent_status === "working")
         .map((agent) => agent.pane_id);
-      if (next.some((id) => typeof id !== "string" || !id)) throw new Error("Invalid pane id");
-      for (const pane of written) if (!next.includes(pane)) await clear(pane);
+      const present = new Set(agents.map((agent) => agent.pane_id));
+      for (const pane of written) if (!present.has(pane)) await clear(pane);
+      for (const agent of agents) {
+        if (agent.agent_status !== "working") {
+          await report(agent.pane_id, STATIC_MARKS[agent.agent_status], `spin_${agent.agent_status}`);
+        }
+      }
       working = next;
     },
     async frame() {
       const glyph = FRAMES[tick++ % FRAMES.length];
       for (const pane of working) {
         await report(pane, glyph);
-        written.add(pane);
       }
     },
     async clear() {
