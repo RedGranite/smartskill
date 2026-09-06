@@ -1,0 +1,27 @@
+id = "smartskill.spinner"
+name = "Windows Agent Spinner"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Working-state braille animation using display-only metadata"
+platforms = ["windows"]
+
+[[startup]]
+command = ["node", "spinner.js", "start"]
+
+[[actions]]
+id = "start"
+title = "Start agent spinner"
+contexts = ["workspace"]
+command = ["node", "spinner.js", "start"]
+
+[[actions]]
+id = "stop"
+title = "Stop agent spinner"
+contexts = ["workspace"]
+command = ["node", "spinner.js", "stop"]
+
+[[actions]]
+id = "status"
+title = "Agent spinner status"
+contexts = ["workspace"]
+command = ["node", "spinner.js", "status"]

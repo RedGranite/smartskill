@@ -20,6 +20,8 @@
 
 文件只写入一次，不代表运行时只执行一次。仅复制 Herdr 配置和 Markdown 规则，无法代替被它们引用的脚本与 hook 注册。
 
+Agents 面板的可选工作动画见 [Windows Agent Spinner](spinner/README.md)，使用显示 metadata，并保留原生状态圆点。
+
 ## 文件位置与归属
 
 以下使用默认用户目录。`%USERPROFILE%` 表示用户主目录，`%APPDATA%` 表示漫游配置目录；PowerShell 中分别写作 `$env:USERPROFILE`、`$env:APPDATA`。使用自定义配置目录时，相应调整路径，保留其他配置项和已有 hooks。
