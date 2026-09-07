@@ -6,13 +6,39 @@
 
 - 目标：在 Agents 面板的项目名前用单个状态位置替换原生圆点。`working` 显示黄色 `⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷` 动画；`blocked` 为闪烁红点、`done` 为绿色 `OK`、`idle` 为灰色空心圆、`unknown` 为灰色小点。保留三行布局。
 - 输入：Herdr 注入的 `HERDR_SOCKET_PATH`、`HERDR_PLUGIN_CONFIG_DIR` 和 `HERDR_PLUGIN_STATE_DIR`；需要 Windows 和 Node.js，无 npm 依赖。直接通过 Windows named pipe 发送 Herdr 官方 JSON API 请求。
-- 输出：只上报来源 `smartskill.spinner` 的 `$spin` 及 `$spin_blocked`、`$spin_done`、`$spin_idle`、`$spin_unknown` metadata，TTL 为 2 秒；每次原子更新只保留一个非空标记。不改 agent 名、工作状态、标题或终端内容。
+- 输出：上报来源 `smartskill.spinner` 的状态及关注布局 metadata，TTL 为 2 秒；每次原子更新只保留一个状态标记。不改 agent 名、工作状态、标题或终端内容。
 - 状态：每秒读取一次真实状态；进入 `working` 旋转，进入 `blocked` 闪烁，其他状态显示静态标记。读取或更新失败时记录错误并退出，残余图标由 TTL 清除。
 - 并发：startup 和手动 start 都可能触发启动；以 Windows 用户及 Herdr socket 路径生成专属 named pipe，同一会话只允许一个持有者。重复 start 为 no-op；stop 请求让持有者清理后释放管道。动画帧和状态刷新串行执行。
 - Critical path：取得单实例管道 → 获取状态 → 上报帧 → 等待下一帧。任何 API 失败均停止，避免持续使用旧状态；pane 已关闭时丢弃该 pane 的更新。
 - 非目标：不修改 Herdr 二进制，不替换原生状态检测，不添加主题选择、自动重试或跨平台支持。
 
 ## 使用
+
+### 关注试用
+
+`toggle-attention` 动作切换当前 pane 的关注状态。首次使用从全部展开转为仅关注当前 pane；随后在关注集合中加入或移除当前 pane。`expand-all` 恢复全部展开。关注集合按 Herdr socket 分开保存在插件状态目录，重启插件后保留；新 pane 默认收起。停止插件不会关闭会话。
+
+关注项显示三行并保留动画，其余显示一行静态状态、项目名及摘要。第一行保留内置 `workspace`，即使插件退出仍可找到会话。启用该布局时，在原先五个状态 token 后依次放 `$parked_state`、`workspace`、`$parked_summary`，均使用灰色；第二、三行分别将 `tab`、`agent` 替换为 `$focus_summary`、`$focus_agent`。缺失 metadata 的行由 Herdr 隐藏。
+
+快捷键配置示例，默认 prefix 为 `Ctrl+B`：
+
+```toml
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "smartskill.spinner.toggle-attention"
+description = "切换当前会话关注"
+
+[[keys.command]]
+key = "prefix+g"
+type = "plugin_action"
+command = "smartskill.spinner.expand-all"
+description = "全部会话展开"
+```
+
+快捷键和插件动作都是触发源，关注集合只由后台循环串行修改；先原子替换状态文件，再更新内存并重新读取布局。动画帧与这些操作共用一个消费者。状态写入或 API 失败时进程退出并清理 metadata，调用失败可查插件日志；恢复原始布局需把第二、三行换回内置 `tab`、`agent`。
+
+### 启停
 
 在 Herdr 内从仓库根目录运行：
 

@@ -12,6 +12,7 @@ const FRAMES = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 const STATIC_MARKS = { blocked: "●", done: "OK", idle: "○", unknown: "·" };
 const EMPTY_TOKENS = Object.fromEntries(["spin", ...Object.keys(STATIC_MARKS).map((state) => `spin_${state}`)].map((key) => [key, null]));
 const TTL_MS = 2000;
+const EMPTY_LAYOUT = { focus_summary: null, focus_agent: null, parked_summary: null, parked_state: null };
 
 function intervalFrom(config) {
   const interval = config.intervalMs ?? 250;
@@ -48,19 +49,21 @@ function callHerdr(method, params = {}, endpoint = "\\\\.\\pipe\\" + process.env
   });
 }
 
-function createAnimation(call) {
+function createAnimation(call, attention = { panes: null }) {
   let working = [];
   let blocked = [];
   let tick = 0;
+  let layouts = new Map();
   const written = new Set();
   async function report(pane, glyph, key = "spin") {
     // Set one mark and clear the other states atomically: one visible slot.
     await call("pane.report_metadata", {
-      pane_id: pane, source: SOURCE, tokens: { ...EMPTY_TOKENS, [key]: glyph }, ttl_ms: TTL_MS,
+      pane_id: pane, source: SOURCE, tokens: { ...EMPTY_TOKENS, ...EMPTY_LAYOUT, ...layouts.get(pane), [key]: glyph }, ttl_ms: TTL_MS,
     });
     written.add(pane);
   }
   async function clear(pane) {
+    layouts.delete(pane);
     await report(pane, null);
     written.delete(pane);
   }
@@ -75,18 +78,28 @@ function createAnimation(call) {
         (agent.agent_status !== "working" && !Object.hasOwn(STATIC_MARKS, agent.agent_status)))) {
         throw new Error("Invalid pane id or agent status");
       }
+      const tabs = new Map((result.snapshot.tabs ?? []).map((tab) => [tab.tab_id, tab.label]));
+      layouts = new Map(agents.map((agent) => {
+        const expanded = attention.panes === null || attention.panes.includes(agent.pane_id);
+        const summary = tabs.get(agent.tab_id) || agent.terminal_title_stripped || agent.pane_id;
+        return [agent.pane_id, expanded
+          ? { focus_summary: summary, focus_agent: agent.name || agent.agent || null }
+          : { parked_summary: summary, parked_state: agent.agent_status === "working" ? "◌" : STATIC_MARKS[agent.agent_status] }];
+      }));
       const next = agents
-        .filter((agent) => agent.agent_status === "working")
+        .filter((agent) => agent.agent_status === "working" && !layouts.get(agent.pane_id).parked_state)
         .map((agent) => agent.pane_id);
       const present = new Set(agents.map((agent) => agent.pane_id));
       for (const pane of written) if (!present.has(pane)) await clear(pane);
       for (const agent of agents) {
-        if (agent.agent_status !== "working" && agent.agent_status !== "blocked") {
+        if (layouts.get(agent.pane_id).parked_state) {
+          await report(agent.pane_id, null);
+        } else if (agent.agent_status !== "working" && agent.agent_status !== "blocked") {
           await report(agent.pane_id, STATIC_MARKS[agent.agent_status], `spin_${agent.agent_status}`);
         }
       }
       working = next;
-      blocked = agents.filter((agent) => agent.agent_status === "blocked").map((agent) => agent.pane_id);
+      blocked = agents.filter((agent) => agent.agent_status === "blocked" && !layouts.get(agent.pane_id).parked_state).map((agent) => agent.pane_id);
     },
     async frame() {
       const glyph = FRAMES[tick % FRAMES.length];
@@ -129,7 +142,11 @@ function control(command) {
 }
 
 async function run(interval) {
-  const animation = createAnimation(callHerdr);
+  const attentionFile = path.join(process.env.HERDR_PLUGIN_STATE_DIR, path.basename(controlPath()) + "-attention.json");
+  const attention = { panes: fs.existsSync(attentionFile) ? JSON.parse(fs.readFileSync(attentionFile, "utf8")) : null };
+  if (attention.panes !== null && (!Array.isArray(attention.panes) || attention.panes.some((pane) => typeof pane !== "string"))) throw new Error("Invalid attention.json");
+  const animation = createAnimation(callHerdr, attention);
+  const pending = [];
   let stopping = false;
   let finished;
   const server = net.createServer((socket) => {
@@ -139,14 +156,16 @@ async function run(interval) {
     socket.on("error", (error) => console.error("Control connection:", error.message));
     socket.on("data", async (data) => {
       input += data;
-      if (input.length > 32) return socket.destroy();
+      if (input.length > 256) return socket.destroy();
       if (!input.endsWith("\n")) return;
       if (input.trim() === "stop") {
         stopping = true;
         await finished;
         socket.end("stopped\n");
       } else if (input.trim() === "status") {
-        socket.end(JSON.stringify({ pid: process.pid, intervalMs: interval }) + "\n");
+        socket.end(JSON.stringify({ pid: process.pid, intervalMs: interval, attention: attention.panes }) + "\n");
+      } else if (input.trim() === "expand-all" || /^toggle [A-Za-z0-9:_-]+$/.test(input.trim())) {
+        pending.push({ command: input.trim(), socket });
       } else socket.end("unknown command\n");
     });
   });
@@ -163,6 +182,25 @@ async function run(interval) {
     let nextPoll = 0;
     try {
       while (!stopping) {
+        // One consumer applies controls and frames; no stale frame can undo a toggle.
+        while (pending.length) {
+          const { command, socket } = pending.shift();
+          const pane = command.slice(7);
+          if (command !== "expand-all") {
+            const snapshot = await callHerdr("session.snapshot");
+            if (!snapshot.snapshot.agents.some((agent) => agent.pane_id === pane)) {
+              socket.end(JSON.stringify({ error: "当前 pane 没有 Agent，请先选中一个 Agent 会话" }) + "\n");
+              continue;
+            }
+          }
+          const next = command === "expand-all" ? null : attention.panes === null ? [pane]
+            : attention.panes.includes(pane) ? attention.panes.filter((id) => id !== pane) : [...attention.panes, pane];
+          fs.writeFileSync(attentionFile + ".tmp", JSON.stringify(next));
+          fs.renameSync(attentionFile + ".tmp", attentionFile);
+          attention.panes = next;
+          socket.end(JSON.stringify({ attention: next }) + "\n");
+          nextPoll = 0;
+        }
         if (Date.now() >= nextPoll) {
           await animation.refresh();
           nextPoll = Date.now() + 1000;
@@ -208,6 +246,15 @@ async function main() {
     if (!process.env[name]) throw new Error(`Missing ${name}; use the Herdr plugin action`);
   }
   const command = process.argv[2];
+  if (command === "toggle" || command === "expand-all") {
+    const pane = process.env.HERDR_PANE_ID;
+    if (command === "toggle" && !/^[A-Za-z0-9:_-]+$/.test(pane || "")) throw new Error("Missing valid HERDR_PANE_ID");
+    const result = await control(command === "toggle" ? `toggle ${pane}` : command);
+    if (result === "stopped") throw new Error("Start the spinner first");
+    const response = JSON.parse(result);
+    if (!Object.hasOwn(response, "attention")) throw new Error(response.error || "Invalid attention response");
+    return console.log(result);
+  }
   if (command === "stop" || command === "status") {
     return console.log(JSON.stringify({ result: await control(command), stateDir: process.env.HERDR_PLUGIN_STATE_DIR }));
   }

@@ -25,3 +25,15 @@ id = "status"
 title = "Agent spinner status"
 contexts = ["workspace"]
 command = ["node", "spinner.js", "status"]
+
+[[actions]]
+id = "toggle-attention"
+title = "切换当前会话关注"
+contexts = ["pane"]
+command = ["node", "spinner.js", "toggle"]
+
+[[actions]]
+id = "expand-all"
+title = "全部会话展开"
+contexts = ["workspace"]
+command = ["node", "spinner.js", "expand-all"]

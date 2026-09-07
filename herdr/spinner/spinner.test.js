@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const net = require("node:net");
 const { createAnimation, intervalFrom, callHerdr } = require("./spinner");
+const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.startsWith("spin") && value !== null);
 
 (async () => {
   let agents = [
@@ -21,12 +22,12 @@ const { createAnimation, intervalFrom, callHerdr } = require("./spinner");
   });
   await animation.refresh();
   assert.deepEqual(writes.map((params) => params.tokens[`spin_${params.pane_id}`]), ["○", "OK", "·"]);
-  assert(writes.every((params) => Object.values(params.tokens).filter((value) => value !== null).length === 1));
+  assert(writes.every((params) => marks(params.tokens).length === 1));
   writes.length = 0;
   for (let i = 0; i < 9; i++) await animation.frame();
   assert.deepEqual(writes.filter((params) => params.pane_id === "working").map((params) => params.tokens.spin), ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷", "⣾"]);
   assert.deepEqual(writes.filter((params) => params.pane_id === "blocked").map((params) => params.tokens.spin_blocked), ["●", "●", "\u2800", "\u2800", "●", "●", "\u2800", "\u2800", "●"]);
-  assert(writes.every((params) => params.ttl_ms === 2000 && Object.values(params.tokens).filter((value) => value !== null).length === 1));
+  assert(writes.every((params) => params.ttl_ms === 2000 && marks(params.tokens).length === 1));
   agents = [{ pane_id: "working", agent_status: "done" }];
   await animation.refresh();
   assert.equal(writes.at(-1).tokens.spin, null);
@@ -38,7 +39,7 @@ const { createAnimation, intervalFrom, callHerdr } = require("./spinner");
   await animation.refresh();
   await animation.frame();
   assert.equal(writes.at(-1).tokens.spin_done, null, "working clears the old static mark");
-  assert.equal(Object.values(writes.at(-1).tokens).filter((value) => value !== null).length, 1);
+  assert.equal(marks(writes.at(-1).tokens).length, 1);
   agents[0].agent_status = "blocked";
   await animation.refresh();
   await animation.frame();
@@ -61,6 +62,38 @@ const { createAnimation, intervalFrom, callHerdr } = require("./spinner");
   assert.equal(writes.length, failedCount, "no working or blocked animation using stale state");
   await animation.clear();
   assert(Object.values(writes.at(-1).tokens).every((value) => value === null));
+  const attention = { panes: ["a"] };
+  const layoutWrites = [];
+  const focusedAnimation = createAnimation(async (method, params) => {
+    if (method === "session.snapshot") return { snapshot: {
+      agents: ["a", "b"].map((id) => ({ pane_id: id, tab_id: id, name: "sol", agent_status: "working" })),
+      tabs: ["a", "b"].map((id) => ({ tab_id: id, label: `Task ${id}` })),
+    } };
+    layoutWrites.push(params);
+    return {};
+  }, attention);
+  await focusedAnimation.refresh();
+  await focusedAnimation.frame();
+  assert.equal(layoutWrites[0].tokens.parked_summary, "Task b");
+  assert.equal(layoutWrites[0].tokens.focus_summary, null);
+  assert.equal(marks(layoutWrites[0].tokens).length, 0);
+  assert.equal(layoutWrites.at(-1).tokens.focus_summary, "Task a");
+  attention.panes = ["b"];
+  layoutWrites.length = 0;
+  await focusedAnimation.refresh();
+  await focusedAnimation.frame();
+  assert.equal(layoutWrites[0].pane_id, "a");
+  assert.equal(layoutWrites[0].tokens.focus_agent, null);
+  assert.equal(layoutWrites.at(-1).pane_id, "b");
+  assert.equal(layoutWrites.at(-1).tokens.parked_summary, null);
+  attention.panes = null;
+  layoutWrites.length = 0;
+  await focusedAnimation.refresh();
+  await focusedAnimation.frame();
+  assert.equal(layoutWrites.length, 2);
+  assert(layoutWrites.every((entry) => entry.tokens.focus_agent === "sol" && entry.tokens.parked_state === null));
+  await focusedAnimation.clear();
+  assert(Object.values(layoutWrites.at(-1).tokens).every((value) => value === null));
   assert.equal(intervalFrom({}), 250);
   assert.equal(intervalFrom({ intervalMs: 500 }), 500);
   for (const intervalMs of [0, 249, 1001, "250", 250.5]) assert.throws(() => intervalFrom({ intervalMs }));
