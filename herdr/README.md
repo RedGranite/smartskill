@@ -2,7 +2,7 @@
 
 本文说明如何在 Windows 上配置 Herdr 的 pane 信息更新、自定义快捷键、已有会话合并与拆出，以及如何迁移和验收。需要 PowerShell 7（`pwsh`）；在 Herdr 内完成安装和检查，以使用其注入的环境变量。
 
-核对日期：2026-09-06。已核对的 Herdr 版本为 `0.8.2-preview.2026-08-31-b1ff4582e968`；其他版本请检查对应的 CLI 和配置语法。
+核对日期：2026-09-07。已核对的 Herdr 版本为 `0.8.2-preview.2026-08-31-b1ff4582e968`；其他版本请检查对应的 CLI 和配置语法。
 
 ## 文档定位
 
@@ -20,7 +20,7 @@
 
 文件只写入一次，不代表运行时只执行一次。仅复制 Herdr 配置和 Markdown 规则，无法代替被它们引用的脚本与 hook 注册。
 
-Agents 面板的可选工作动画见 [Windows Agent Spinner](spinner/README.md)，使用显示 metadata，在同一个位置切换工作动画与静态状态标记。
+Agents 面板的动画与关注折叠由 [Windows Agent Spinner](spinner/README.md) 提供，使用显示 metadata，不改变会话运行状态。
 
 ## 文件位置与归属
 
@@ -48,7 +48,7 @@ Agents 面板的可选工作动画见 [Windows Agent Spinner](spinner/README.md)
 
 ## Herdr UI 与快捷键
 
-以下为现有配置中与本方案有关的部分。合并到现有同名 TOML 表，避免重复创建 `[ui]`、`[keys]` 或相同快捷键；保留现有主题、通知和其他设置。
+以下是无需插件的基础三行布局及导航、移动绑定。启用动画与关注折叠时，用 [插件布局配置](spinner/README.md#关注布局) 替换 `[ui.sidebar.agents]`，并添加下文 F/G 绑定。合并到现有同名 TOML 表，避免重复创建 `[ui]`、`[keys]` 或相同快捷键；保留现有主题、通知和其他设置。
 
 ```toml
 [ui]
@@ -98,7 +98,7 @@ description = "当前分屏恢复为独立标签页"
 
 当前核对的配置提供 `fg`、`bold`、`dim`，未提供按项目自动配色或项目组分割线的选项。`rows_by_agent` 按 `codex`、`claude` 等 agent 类型覆盖布局，不按项目区分。这些布局只影响展开的桌面侧栏，折叠和移动端保留紧凑布局。[Herdr 侧栏配置说明](https://herdr.dev/docs/configuration/#sidebar-row-layouts)
 
-### 快捷键行为
+## 新增快捷键与操作逻辑
 
 这里的 `type = "shell"` 在后台运行脚本。Windows 的自定义命令经过 `cmd.exe /d /c`，因此配置字符串中的 `%APPDATA%` 是有意使用的 CMD 环境变量语法；脚本本体由 `pwsh.exe` 执行。[Herdr 配置说明](https://herdr.dev/docs/configuration/#terminal-defaults)
 
@@ -113,6 +113,39 @@ description = "当前分屏恢复为独立标签页"
 | `-` | 新建上下分屏 | 内置 |
 | `m` | 将当前 pane 移到前一标签页右侧 | 自定义脚本 |
 | `t` | 将当前 pane 移出为独立标签页 | 自定义脚本 |
+| `f` | 关注或取消关注当前 Agent，已关注摘要前显示 `★` | `smartskill.spinner` 插件 |
+| `g` | 切换全部展开或按关注折叠，保留关注列表 | `smartskill.spinner` 插件 |
+
+### F/G：关注与展开分开控制
+
+F 只修改当前会话的关注标记，G 只切换列表视图。先选中一个 Agent，再按快捷键；普通终端没有 Agent 时，F 会提示错误。
+
+| 当前视图 | 按 F | 按 G |
+| --- | --- | --- |
+| 全部展开 | 加入或取消 `★`，所有会话仍为三行 | 已关注项保留三行，其余压成一行 |
+| 按关注折叠 | 加入关注后展开当前项；取消关注后收起当前项 | 所有会话展开为三行，关注标记保留 |
+
+例如有 10 个会话，只需要处理其中 3 个：按 G 切到全部展开，依次选中这 3 个会话并按 F 加星，再按 G 收起其余 7 个。之后可随时用 G 展开查看，再按 G 回到原来的关注布局，无需重新选择。
+
+关注列表和展开状态会保存，重启插件后保留。新会话默认未关注；关注列表为空时，按关注折叠会把所有条目压成一行。折叠只减少显示内容，不关闭、暂停或移动会话，也不置顶或改变排序。
+
+启用 [插件及关注布局](spinner/README.md#关注布局) 后，将以下绑定合并到 `config.toml`；已有 F/G 绑定时替换原条目：
+
+```toml
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "smartskill.spinner.toggle-attention"
+description = "切换当前会话关注"
+
+[[keys.command]]
+key = "prefix+g"
+type = "plugin_action"
+command = "smartskill.spinner.toggle-view"
+description = "切换全部展开或按关注折叠"
+```
+
+### M/T：合并与拆出已有会话
 
 `v` 和 `-` 创建新终端。合并两个已经运行的会话使用 `m`。
 
@@ -251,6 +284,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Herdr config check failed' }
 | Codex 命名 | 运行下面的 `-SelfTest` | 显示计算出的名称及检查结果，不执行改名 |
 | Claude 命名 | 在有 Claude 会话记录的项目目录运行 `-SelfTest` | 显示模型与名称；没有模型记录时说明跳过 |
 | 合并与拆出 | 用两个可用于验证的会话执行 `m → t` | 终端会话保留，中文及带引号的原名称保留 |
+| 关注与折叠 | 全部展开时按 F，再按 G 两次 | F 只改变星标；G 往返后关注列表保留 |
+| 插件内部检查 | `node herdr/spinner/spinner.test.js` | `PASS`，包含 F/G 状态分离与旧状态格式读取 |
 
 ```powershell
 pwsh -NoProfile -File "$env:APPDATA\herdr\merge-left.ps1" -SelfTest

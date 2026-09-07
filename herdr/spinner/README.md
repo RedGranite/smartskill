@@ -14,27 +14,32 @@
 
 ## 使用
 
-### 关注试用
+### 关注布局
 
-`toggle-attention`（F）只切换当前 pane 的关注状态，已关注摘要前显示 `★`；`toggle-view`（G）只切换全部展开或按关注折叠，保留关注列表。全部展开时按 F 只改变标记；按关注折叠时，取消关注会立即收起该项。`expand-all` 命令仍可单向展开，也保留关注列表。关注列表 `panes` 与视图开关 `expanded` 按 Herdr socket 分开保存在插件状态目录，重启插件后保留。旧数组文件保留原关注列表并按关注折叠；旧 `null` 文件表示全部展开、关注列表为空。新 pane 默认未关注。停止插件不会关闭会话。
+快捷键、视图切换和使用示例见 [新增快捷键与操作逻辑](../README.md#新增快捷键与操作逻辑)。`toggle-attention` 切换关注，`toggle-view` 切换视图；另保留 `expand-all` 命令供脚本单向展开，同时保留关注列表。
 
-关注项显示三行并保留动画，其余显示一行静态状态、项目名及摘要。第一行保留内置 `workspace`，即使插件退出仍可找到会话。启用该布局时，在原先五个状态 token 后依次放 `$parked_state`、`workspace`、`$parked_summary`，均使用灰色；第二、三行分别将 `tab`、`agent` 替换为 `$focus_summary`、`$focus_agent`。缺失 metadata 的行由 Herdr 隐藏。
-
-快捷键配置示例，默认 prefix 为 `Ctrl+B`：
+安装并启动插件后，用以下内容替换 `[ui.sidebar.agents]`，再添加主 README 中的 F/G 绑定。全部展开时每项三行；按关注折叠时，已关注项保留三行和动画，其他项只有一行静态状态、项目名及摘要。内置 `workspace` 始终保留，插件退出后仍可找到会话。
 
 ```toml
-[[keys.command]]
-key = "prefix+f"
-type = "plugin_action"
-command = "smartskill.spinner.toggle-attention"
-description = "切换当前会话关注"
-
-[[keys.command]]
-key = "prefix+g"
-type = "plugin_action"
-command = "smartskill.spinner.toggle-view"
-description = "切换全部展开或按关注折叠"
+[ui.sidebar.agents]
+row_gap = 0
+rows = [
+  [
+    { token = "$spin", fg = "#e5b567", bold = true, dim = false },
+    { token = "$spin_blocked", fg = "#f38ba8", dim = false },
+    { token = "$spin_done", fg = "#a6e3a1", dim = false },
+    { token = "$spin_idle", fg = "#7c828c", dim = false },
+    { token = "$spin_unknown", fg = "#7c828c", dim = false },
+    { token = "$parked_state", fg = "#7c828c" },
+    { token = "workspace", fg = "#7c828c" },
+    { token = "$parked_summary", fg = "#7c828c" },
+  ],
+  [{ token = "$focus_summary", fg = "#b8bdc7", bold = true, dim = false }],
+  [{ token = "$focus_agent", fg = "#7c828c", bold = false, dim = false }],
+]
 ```
+
+状态文件按 Herdr socket 分开保存在插件状态目录，包含关注列表 `panes` 与视图开关 `expanded`。旧数组文件保留原关注列表并按关注折叠；旧 `null` 文件表示全部展开、关注列表为空。
 
 快捷键和插件动作都是触发源，关注集合只由后台循环串行修改；先原子替换状态文件，再更新内存并重新读取布局。动画帧与这些操作共用一个消费者。状态写入或 API 失败时进程退出并清理 metadata，调用失败可查插件日志；恢复原始布局需把第二、三行换回内置 `tab`、`agent`。
 
@@ -71,12 +76,14 @@ Windows 管道地址按当前 Herdr 使用的 `interprocess::GenericNamespaced` 
 
 ## 结构与验证
 
-`spinner.js` 包含动画状态处理与 Windows 启停；理解状态刷新失败后的退出和单实例管道，有助于修改后保持状态一致。`herdr-plugin.toml` 注册启动钩子及 start/stop/status 动作。
+`spinner.js` 包含动画状态处理与 Windows 启停；理解状态刷新失败后的退出和单实例管道，有助于修改后保持状态一致。`herdr-plugin.toml` 注册启动钩子、启停和关注视图动作。
 
 ```powershell
 node herdr/spinner/spinner.test.js
 ```
 
-预期显示 `PASS`，覆盖工作帧推进、红点亮灭、绿色 `OK`、状态切换清理、单位置互斥、API 失败后不再发送帧、配置边界，以及管道响应分片和异常断开。
+预期显示 `PASS`，覆盖 F/G 状态分离、关注布局切换、旧状态格式读取、工作帧推进、红点亮灭、绿色 `OK`、状态切换清理、单位置互斥、API 失败后不再发送帧、配置边界，以及管道响应分片和异常断开。
 
 2026-09-06 在上述 Herdr 版本完成启停实测：重复 start 返回 `already-running`；stop 清除显示 token；通过插件动作再次启动后，工作 pane 恢复更新 `⣾` 环形帧。
+
+2026-09-07 完成关注布局实测：G/F 独立切换，往返操作后原关注集合和视图保留。
