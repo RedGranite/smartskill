@@ -14,6 +14,21 @@ const EMPTY_TOKENS = Object.fromEntries(["spin", ...Object.keys(STATIC_MARKS).ma
 const TTL_MS = 2000;
 const EMPTY_LAYOUT = { focus_summary: null, focus_agent: null, parked_summary: null, parked_state: null };
 
+function readAttention(value) {
+  // Preserve the previous file format on upgrade; null had already discarded its selection.
+  const state = value === null ? { panes: [], expanded: true }
+    : Array.isArray(value) ? { panes: value, expanded: false } : value;
+  if (!state || !Array.isArray(state.panes) || state.panes.some((pane) => typeof pane !== "string") || typeof state.expanded !== "boolean") throw new Error("Invalid attention.json");
+  return state;
+}
+
+function nextAttention(state, command, pane) {
+  if (command === "toggle-view") return { ...state, expanded: !state.expanded };
+  if (command === "expand-all") return { ...state, expanded: true };
+  if (command !== "toggle") throw new Error("Invalid attention command");
+  return { ...state, panes: state.panes.includes(pane) ? state.panes.filter((id) => id !== pane) : [...state.panes, pane] };
+}
+
 function intervalFrom(config) {
   const interval = config.intervalMs ?? 250;
   if (!Number.isInteger(interval) || interval < 250 || interval > 1000) {
@@ -49,7 +64,7 @@ function callHerdr(method, params = {}, endpoint = "\\\\.\\pipe\\" + process.env
   });
 }
 
-function createAnimation(call, attention = { panes: null }) {
+function createAnimation(call, attention = { panes: [], expanded: true }) {
   let working = [];
   let blocked = [];
   let tick = 0;
@@ -80,8 +95,9 @@ function createAnimation(call, attention = { panes: null }) {
       }
       const tabs = new Map((result.snapshot.tabs ?? []).map((tab) => [tab.tab_id, tab.label]));
       layouts = new Map(agents.map((agent) => {
-        const expanded = attention.panes === null || attention.panes.includes(agent.pane_id);
-        const summary = tabs.get(agent.tab_id) || agent.terminal_title_stripped || agent.pane_id;
+        const selected = attention.panes.includes(agent.pane_id);
+        const expanded = attention.expanded || selected;
+        const summary = (selected ? "★ " : "") + (tabs.get(agent.tab_id) || agent.terminal_title_stripped || agent.pane_id);
         return [agent.pane_id, expanded
           ? { focus_summary: summary, focus_agent: agent.name || agent.agent || null }
           : { parked_summary: summary, parked_state: agent.agent_status === "working" ? "◌" : STATIC_MARKS[agent.agent_status] }];
@@ -143,8 +159,7 @@ function control(command) {
 
 async function run(interval) {
   const attentionFile = path.join(process.env.HERDR_PLUGIN_STATE_DIR, path.basename(controlPath()) + "-attention.json");
-  const attention = { panes: fs.existsSync(attentionFile) ? JSON.parse(fs.readFileSync(attentionFile, "utf8")) : null };
-  if (attention.panes !== null && (!Array.isArray(attention.panes) || attention.panes.some((pane) => typeof pane !== "string"))) throw new Error("Invalid attention.json");
+  const attention = readAttention(fs.existsSync(attentionFile) ? JSON.parse(fs.readFileSync(attentionFile, "utf8")) : null);
   const animation = createAnimation(callHerdr, attention);
   const pending = [];
   let stopping = false;
@@ -163,8 +178,8 @@ async function run(interval) {
         await finished;
         socket.end("stopped\n");
       } else if (input.trim() === "status") {
-        socket.end(JSON.stringify({ pid: process.pid, intervalMs: interval, attention: attention.panes }) + "\n");
-      } else if (input.trim() === "expand-all" || /^toggle [A-Za-z0-9:_-]+$/.test(input.trim())) {
+        socket.end(JSON.stringify({ pid: process.pid, intervalMs: interval, attention }) + "\n");
+      } else if (["expand-all", "toggle-view"].includes(input.trim()) || /^toggle [A-Za-z0-9:_-]+$/.test(input.trim())) {
         pending.push({ command: input.trim(), socket });
       } else socket.end("unknown command\n");
     });
@@ -186,18 +201,17 @@ async function run(interval) {
         while (pending.length) {
           const { command, socket } = pending.shift();
           const pane = command.slice(7);
-          if (command !== "expand-all") {
+          if (command.startsWith("toggle ")) {
             const snapshot = await callHerdr("session.snapshot");
             if (!snapshot.snapshot.agents.some((agent) => agent.pane_id === pane)) {
               socket.end(JSON.stringify({ error: "当前 pane 没有 Agent，请先选中一个 Agent 会话" }) + "\n");
               continue;
             }
           }
-          const next = command === "expand-all" ? null : attention.panes === null ? [pane]
-            : attention.panes.includes(pane) ? attention.panes.filter((id) => id !== pane) : [...attention.panes, pane];
+          const next = nextAttention(attention, command.startsWith("toggle ") ? "toggle" : command, pane);
           fs.writeFileSync(attentionFile + ".tmp", JSON.stringify(next));
           fs.renameSync(attentionFile + ".tmp", attentionFile);
-          attention.panes = next;
+          Object.assign(attention, next);
           socket.end(JSON.stringify({ attention: next }) + "\n");
           nextPoll = 0;
         }
@@ -246,7 +260,7 @@ async function main() {
     if (!process.env[name]) throw new Error(`Missing ${name}; use the Herdr plugin action`);
   }
   const command = process.argv[2];
-  if (command === "toggle" || command === "expand-all") {
+  if (["toggle", "expand-all", "toggle-view"].includes(command)) {
     const pane = process.env.HERDR_PANE_ID;
     if (command === "toggle" && !/^[A-Za-z0-9:_-]+$/.test(pane || "")) throw new Error("Missing valid HERDR_PANE_ID");
     const result = await control(command === "toggle" ? `toggle ${pane}` : command);
@@ -265,5 +279,5 @@ async function main() {
   else await run(interval);
 }
 
-module.exports = { createAnimation, intervalFrom, callHerdr };
+module.exports = { createAnimation, intervalFrom, callHerdr, readAttention, nextAttention };
 if (require.main === module) main().catch((error) => { console.error(error.message); process.exitCode = 1; });

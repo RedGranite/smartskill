@@ -37,3 +37,9 @@ id = "expand-all"
 title = "全部会话展开"
 contexts = ["workspace"]
 command = ["node", "spinner.js", "expand-all"]
+
+[[actions]]
+id = "toggle-view"
+title = "切换全部展开或按关注折叠"
+contexts = ["workspace"]
+command = ["node", "spinner.js", "toggle-view"]

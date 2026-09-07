@@ -1,7 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const net = require("node:net");
-const { createAnimation, intervalFrom, callHerdr } = require("./spinner");
+const { createAnimation, intervalFrom, callHerdr, readAttention, nextAttention } = require("./spinner");
 const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.startsWith("spin") && value !== null);
 
 (async () => {
@@ -62,7 +62,18 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   assert.equal(writes.length, failedCount, "no working or blocked animation using stale state");
   await animation.clear();
   assert(Object.values(writes.at(-1).tokens).every((value) => value === null));
-  const attention = { panes: ["a"] };
+  const attention = readAttention(["a"]);
+  let state = nextAttention(attention, "toggle-view");
+  assert.deepEqual(state, { panes: ["a"], expanded: true });
+  state = nextAttention(state, "toggle", "b");
+  assert.deepEqual(state, { panes: ["a", "b"], expanded: true }, "F preserves expanded view");
+  state = nextAttention(state, "toggle-view");
+  assert.deepEqual(state, { panes: ["a", "b"], expanded: false }, "G restores the selection");
+  state = nextAttention(state, "toggle", "a");
+  assert.deepEqual(state, { panes: ["b"], expanded: false });
+  assert.deepEqual(readAttention(JSON.parse(JSON.stringify(state))), state);
+  assert.deepEqual(readAttention(null), { panes: [], expanded: true });
+  assert.throws(() => readAttention({ panes: [], expanded: "yes" }));
   const layoutWrites = [];
   const focusedAnimation = createAnimation(async (method, params) => {
     if (method === "session.snapshot") return { snapshot: {
@@ -77,7 +88,7 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   assert.equal(layoutWrites[0].tokens.parked_summary, "Task b");
   assert.equal(layoutWrites[0].tokens.focus_summary, null);
   assert.equal(marks(layoutWrites[0].tokens).length, 0);
-  assert.equal(layoutWrites.at(-1).tokens.focus_summary, "Task a");
+  assert.equal(layoutWrites.at(-1).tokens.focus_summary, "★ Task a");
   attention.panes = ["b"];
   layoutWrites.length = 0;
   await focusedAnimation.refresh();
@@ -86,7 +97,7 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   assert.equal(layoutWrites[0].tokens.focus_agent, null);
   assert.equal(layoutWrites.at(-1).pane_id, "b");
   assert.equal(layoutWrites.at(-1).tokens.parked_summary, null);
-  attention.panes = null;
+  attention.expanded = true;
   layoutWrites.length = 0;
   await focusedAnimation.refresh();
   await focusedAnimation.frame();

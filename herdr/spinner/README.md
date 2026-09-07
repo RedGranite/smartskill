@@ -16,7 +16,7 @@
 
 ### 关注试用
 
-`toggle-attention` 动作切换当前 pane 的关注状态。首次使用从全部展开转为仅关注当前 pane；随后在关注集合中加入或移除当前 pane。`expand-all` 恢复全部展开。关注集合按 Herdr socket 分开保存在插件状态目录，重启插件后保留；新 pane 默认收起。停止插件不会关闭会话。
+`toggle-attention`（F）只切换当前 pane 的关注状态，已关注摘要前显示 `★`；`toggle-view`（G）只切换全部展开或按关注折叠，保留关注列表。全部展开时按 F 只改变标记；按关注折叠时，取消关注会立即收起该项。`expand-all` 命令仍可单向展开，也保留关注列表。关注列表 `panes` 与视图开关 `expanded` 按 Herdr socket 分开保存在插件状态目录，重启插件后保留。旧数组文件保留原关注列表并按关注折叠；旧 `null` 文件表示全部展开、关注列表为空。新 pane 默认未关注。停止插件不会关闭会话。
 
 关注项显示三行并保留动画，其余显示一行静态状态、项目名及摘要。第一行保留内置 `workspace`，即使插件退出仍可找到会话。启用该布局时，在原先五个状态 token 后依次放 `$parked_state`、`workspace`、`$parked_summary`，均使用灰色；第二、三行分别将 `tab`、`agent` 替换为 `$focus_summary`、`$focus_agent`。缺失 metadata 的行由 Herdr 隐藏。
 
@@ -32,8 +32,8 @@ description = "切换当前会话关注"
 [[keys.command]]
 key = "prefix+g"
 type = "plugin_action"
-command = "smartskill.spinner.expand-all"
-description = "全部会话展开"
+command = "smartskill.spinner.toggle-view"
+description = "切换全部展开或按关注折叠"
 ```
 
 快捷键和插件动作都是触发源，关注集合只由后台循环串行修改；先原子替换状态文件，再更新内存并重新读取布局。动画帧与这些操作共用一个消费者。状态写入或 API 失败时进程退出并清理 metadata，调用失败可查插件日志；恢复原始布局需把第二、三行换回内置 `tab`、`agent`。
