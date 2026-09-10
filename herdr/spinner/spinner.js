@@ -9,7 +9,7 @@ const { createHash } = require("node:crypto");
 const { setTimeout: sleep } = require("node:timers/promises");
 const SOURCE = "smartskill.spinner";
 const FRAMES = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
-const STATIC_MARKS = { blocked: "●", done: "OK", idle: "○", unknown: "·" };
+const STATIC_MARKS = { blocked: "\u26a0\ufe0f", done: "\u2705", idle: "○", unknown: "·" };
 const EMPTY_TOKENS = Object.fromEntries(["spin", ...Object.keys(STATIC_MARKS).map((state) => `spin_${state}`)].map((key) => [key, null]));
 const TTL_MS = 2000;
 const EMPTY_LAYOUT = { focus_summary: null, focus_agent: null, parked_summary: null, parked_state: null };
@@ -67,6 +67,7 @@ function callHerdr(method, params = {}, endpoint = "\\\\.\\pipe\\" + process.env
 function createAnimation(call, attention = { panes: [], expanded: true }) {
   let working = [];
   let blocked = [];
+  let done = [];
   let tick = 0;
   let layouts = new Map();
   const written = new Set();
@@ -86,6 +87,7 @@ function createAnimation(call, attention = { panes: [], expanded: true }) {
     async refresh() {
       working = []; // A failed snapshot must never keep the last working set.
       blocked = [];
+      done = [];
       const result = await call("session.snapshot");
       if (!Array.isArray(result?.snapshot?.agents)) throw new Error("Missing snapshot.agents");
       const agents = result.snapshot.agents;
@@ -110,27 +112,33 @@ function createAnimation(call, attention = { panes: [], expanded: true }) {
       for (const agent of agents) {
         if (layouts.get(agent.pane_id).parked_state) {
           await report(agent.pane_id, null);
-        } else if (agent.agent_status !== "working" && agent.agent_status !== "blocked") {
+        } else if (!["working", "blocked", "done"].includes(agent.agent_status)) {
           await report(agent.pane_id, STATIC_MARKS[agent.agent_status], `spin_${agent.agent_status}`);
         }
       }
       working = next;
       blocked = agents.filter((agent) => agent.agent_status === "blocked" && !layouts.get(agent.pane_id).parked_state).map((agent) => agent.pane_id);
+      done = agents.filter((agent) => agent.agent_status === "done" && !layouts.get(agent.pane_id).parked_state).map((agent) => agent.pane_id);
     },
     async frame() {
       const glyph = FRAMES[tick % FRAMES.length];
-      // U+2800 is a one-cell braille blank: keep the status column when the dot is off.
-      const blockedGlyph = Math.floor(tick++ / 2) % 2 === 0 ? STATIC_MARKS.blocked : "\u2800";
+      // Two braille blanks retain the emoji's two-cell slot during the off phase.
+      const blockedGlyph = Math.floor(tick / 2) % 2 === 0 ? STATIC_MARKS.blocked : "\u2800\u2800";
+      const doneGlyph = Math.floor(tick++ / 4) % 2 === 0 ? STATIC_MARKS.done : "\u2800\u2800";
       for (const pane of working) {
         await report(pane, glyph);
       }
       for (const pane of blocked) {
         await report(pane, blockedGlyph, "spin_blocked");
       }
+      for (const pane of done) {
+        await report(pane, doneGlyph, "spin_done");
+      }
     },
     async clear() {
       working = [];
       blocked = [];
+      done = [];
       const results = await Promise.allSettled([...written].map(clear));
       for (const result of results) {
         if (result.status === "rejected") console.error("Clear failed; TTL will expire:", result.reason.message);

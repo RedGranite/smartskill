@@ -4,10 +4,10 @@
 
 ## 契约与边界
 
-- 目标：在 Agents 面板的项目名前用单个状态位置替换原生圆点。`working` 显示黄色 `⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷` 动画；`blocked` 为闪烁红点、`done` 为绿色 `OK`、`idle` 为灰色空心圆、`unknown` 为灰色小点。保留三行布局。
+- 目标：在 Agents 面板的项目名前用单个状态位置替换原生圆点。`working` 显示黄色 `⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷` 动画；`blocked` 为闪动的 `⚠️`（U+26A0 U+FE0F）、`done` 为缓慢闪动的绿色 `✅`（U+2705）、`idle` 为灰色空心圆、`unknown` 为灰色小点。保留三行布局。
 - 输入：Herdr 注入的 `HERDR_SOCKET_PATH`、`HERDR_PLUGIN_CONFIG_DIR` 和 `HERDR_PLUGIN_STATE_DIR`；需要 Windows 和 Node.js，无 npm 依赖。直接通过 Windows named pipe 发送 Herdr 官方 JSON API 请求。
 - 输出：上报来源 `smartskill.spinner` 的状态及关注布局 metadata，TTL 为 2 秒；每次原子更新只保留一个状态标记。不改 agent 名、工作状态、标题或终端内容。
-- 状态：每秒读取一次真实状态；进入 `working` 旋转，进入 `blocked` 闪烁，其他状态显示静态标记。读取或更新失败时记录错误并退出，残余图标由 TTL 清除。
+- 状态：每秒读取一次真实状态；进入 `working` 旋转，进入 `blocked` 闪烁，进入 `done` 缓慢闪烁，其他状态显示静态标记。读取或更新失败时记录错误并退出，残余图标由 TTL 清除。
 - 并发：startup 和手动 start 都可能触发启动；以 Windows 用户及 Herdr socket 路径生成专属 named pipe，同一会话只允许一个持有者。重复 start 为 no-op；stop 请求让持有者清理后释放管道。动画帧和状态刷新串行执行。
 - Critical path：取得单实例管道 → 获取状态 → 上报帧 → 等待下一帧。任何 API 失败均停止，避免持续使用旧状态；pane 已关闭时丢弃该 pane 的更新。
 - 非目标：不修改 Herdr 二进制，不替换原生状态检测，不添加主题选择、自动重试或跨平台支持。
@@ -66,9 +66,9 @@ herdr plugin action invoke stop --plugin smartskill.spinner
 
 `herdr config check` 通过后执行 `herdr server reload-config`。
 
-这些标记是普通文字和 Unicode 字符，颜色由 `fg` 设置。`OK` 占两格；红点熄灭时使用一格宽的盲文空白字符（U+2800），保持项目名位置。
+`✅` 与 `⚠️` 使用 emoji 显示；彩色字形的实际颜色由终端和字体决定，单色回退使用 token 的 `fg`。熄灭时使用两个盲文空白字符（U+2800），按双格 emoji 保留项目名位置。
 
-默认帧间隔 250 ms，状态轮询间隔 1 秒；每个工作或等待处理的 pane 每帧发送一次 API 请求，实际帧率受调用耗时影响。红点每两帧切换亮灭，默认亮、灭各约 500 ms。可在插件配置目录的 `config.json` 设置 `{"intervalMs": 500}` 降低开销，允许 250–1000 ms，动画和闪烁会随之变慢，修改后 stop/start 生效。退出 Herdr 后下一次状态读取失败会结束动画进程；开启的插件在下次 Herdr 服务启动时自动启动。禁用插件前先执行 stop。
+默认帧间隔 250 ms，状态轮询间隔 1 秒；每个展开的工作、等待处理或完成的 pane 每帧发送一次 API 请求，实际帧率受调用耗时影响。`⚠️` 每两帧切换亮灭，默认亮、灭各约 500 ms；`✅` 每四帧切换，默认亮、灭各约 1 秒。收起的条目使用相同图标但不闪动。可在插件配置目录的 `config.json` 设置 `{"intervalMs": 500}` 降低开销，允许 250–1000 ms，动画和闪烁会随之变慢，修改后 stop/start 生效。退出 Herdr 后下一次状态读取失败会结束动画进程；开启的插件在下次 Herdr 服务启动时自动启动。禁用插件前先执行 stop。
 
 日志追加写入插件状态目录的 `spinner.log`，start/status 输出进程标识。后台子进程均隐藏窗口。停止失败或异常退出时，显示 metadata 最迟在最后一次更新后约 2 秒过期，状态位置会消失，避免留下过期状态。彻底停用插件时，将上述五个 token 换回 `"state_icon"` 并重载配置。
 
@@ -82,7 +82,7 @@ Windows 管道地址按当前 Herdr 使用的 `interprocess::GenericNamespaced` 
 node herdr/spinner/spinner.test.js
 ```
 
-预期显示 `PASS`，覆盖 F/G 状态分离、关注布局切换、旧状态格式读取、工作帧推进、红点亮灭、绿色 `OK`、状态切换清理、单位置互斥、API 失败后不再发送帧、配置边界，以及管道响应分片和异常断开。
+预期显示 `PASS`，覆盖 F/G 状态分离、关注布局切换、旧状态格式读取、工作帧推进、警告图标亮灭、完成图标慢闪、状态切换清理、单位置互斥、API 失败后不再发送帧、配置边界，以及管道响应分片和异常断开。
 
 2026-09-06 在上述 Herdr 版本完成启停实测：重复 start 返回 `already-running`；stop 清除显示 token；通过插件动作再次启动后，工作 pane 恢复更新 `⣾` 环形帧。
 
