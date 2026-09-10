@@ -88,10 +88,10 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   }, attention);
   await focusedAnimation.refresh();
   await focusedAnimation.frame();
-  assert.equal(layoutWrites[0].tokens.parked_summary, "Task b");
-  assert.equal(layoutWrites[0].tokens.focus_summary, null);
-  assert.equal(marks(layoutWrites[0].tokens).length, 0);
-  assert.equal(layoutWrites.at(-1).tokens.focus_summary, "★ Task a");
+  assert.equal(layoutWrites[1].tokens.parked_summary, "Task b");
+  assert.equal(layoutWrites[1].tokens.focus_summary, null);
+  assert.deepEqual(marks(layoutWrites[1].tokens), marks(layoutWrites[0].tokens), "folding keeps the same animated status token");
+  assert.equal(layoutWrites[0].tokens.focus_summary, "★ Task a");
   attention.panes = ["b"];
   layoutWrites.length = 0;
   await focusedAnimation.refresh();
@@ -108,6 +108,20 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   assert(layoutWrites.every((entry) => entry.tokens.focus_agent === "sol" && entry.tokens.parked_state === null));
   await focusedAnimation.clear();
   assert(Object.values(layoutWrites.at(-1).tokens).every((value) => value === null));
+  const statusFrames = [];
+  for (const expanded of [true, false]) {
+    const frames = [];
+    const view = createAnimation(async (method, params) => {
+      if (method === "session.snapshot") return { snapshot: { agents: ["working", "blocked", "done", "idle", "unknown"].map((state) => ({ pane_id: state, agent_status: state })) } };
+      frames.push([params.pane_id, marks(params.tokens)]);
+      assert.equal(params.tokens.parked_state, null, "legacy compact marker stays cleared");
+      return {};
+    }, { panes: [], expanded });
+    await view.refresh();
+    for (let i = 0; i < 9; i++) await view.frame();
+    statusFrames.push(frames);
+  }
+  assert.deepEqual(statusFrames[0], statusFrames[1], "all states have identical tokens and animation when folded");
   assert.equal(intervalFrom({}), 250);
   assert.equal(intervalFrom({ intervalMs: 500 }), 500);
   for (const intervalMs of [0, 249, 1001, "250", 250.5]) assert.throws(() => intervalFrom({ intervalMs }));

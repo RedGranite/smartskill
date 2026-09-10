@@ -102,23 +102,21 @@ function createAnimation(call, attention = { panes: [], expanded: true }) {
         const summary = (selected ? "★ " : "") + (tabs.get(agent.tab_id) || agent.terminal_title_stripped || agent.pane_id);
         return [agent.pane_id, expanded
           ? { focus_summary: summary, focus_agent: agent.name || agent.agent || null }
-          : { parked_summary: summary, parked_state: agent.agent_status === "working" ? "◌" : STATIC_MARKS[agent.agent_status] }];
+          : { parked_summary: summary }];
       }));
       const next = agents
-        .filter((agent) => agent.agent_status === "working" && !layouts.get(agent.pane_id).parked_state)
+        .filter((agent) => agent.agent_status === "working")
         .map((agent) => agent.pane_id);
       const present = new Set(agents.map((agent) => agent.pane_id));
       for (const pane of written) if (!present.has(pane)) await clear(pane);
       for (const agent of agents) {
-        if (layouts.get(agent.pane_id).parked_state) {
-          await report(agent.pane_id, null);
-        } else if (!["working", "blocked", "done"].includes(agent.agent_status)) {
+        if (!["working", "blocked", "done"].includes(agent.agent_status)) {
           await report(agent.pane_id, STATIC_MARKS[agent.agent_status], `spin_${agent.agent_status}`);
         }
       }
       working = next;
-      blocked = agents.filter((agent) => agent.agent_status === "blocked" && !layouts.get(agent.pane_id).parked_state).map((agent) => agent.pane_id);
-      done = agents.filter((agent) => agent.agent_status === "done" && !layouts.get(agent.pane_id).parked_state).map((agent) => agent.pane_id);
+      blocked = agents.filter((agent) => agent.agent_status === "blocked").map((agent) => agent.pane_id);
+      done = agents.filter((agent) => agent.agent_status === "done").map((agent) => agent.pane_id);
     },
     async frame() {
       const glyph = FRAMES[tick % FRAMES.length];

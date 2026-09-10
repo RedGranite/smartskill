@@ -18,7 +18,7 @@
 
 快捷键、视图切换和使用示例见 [新增快捷键与操作逻辑](../README.md#新增快捷键与操作逻辑)。`toggle-attention` 切换关注，`toggle-view` 切换视图；另保留 `expand-all` 命令供脚本单向展开，同时保留关注列表。
 
-安装并启动插件后，用以下内容替换 `[ui.sidebar.agents]`，再添加主 README 中的 F/G 绑定。全部展开时每项三行；按关注折叠时，已关注项保留三行和动画，其他项只有一行静态状态、项目名及摘要。内置 `workspace` 始终保留，插件退出后仍可找到会话。
+安装并启动插件后，用以下内容替换 `[ui.sidebar.agents]`，再添加主 README 中的 F/G 绑定。全部展开时每项三行；按关注折叠时，已关注项保留三行，其他项只有一行状态、项目名及摘要；两种布局使用相同颜色和动画。内置 `workspace` 始终保留，插件退出后仍可找到会话。
 
 ```toml
 [ui.sidebar.agents]
@@ -30,7 +30,6 @@ rows = [
     { token = "$spin_done", fg = "#a6e3a1", dim = false },
     { token = "$spin_idle", fg = "#7c828c", dim = false },
     { token = "$spin_unknown", fg = "#7c828c", dim = false },
-    { token = "$parked_state", fg = "#7c828c" },
     { token = "workspace", fg = "#7c828c" },
     { token = "$parked_summary", fg = "#7c828c" },
   ],
@@ -68,7 +67,7 @@ herdr plugin action invoke stop --plugin smartskill.spinner
 
 `✅` 与 `⚠️` 使用 emoji 显示；彩色字形的实际颜色由终端和字体决定，单色回退使用 token 的 `fg`。熄灭时使用两个盲文空白字符（U+2800），按双格 emoji 保留项目名位置。
 
-默认帧间隔 250 ms，状态轮询间隔 1 秒；每个展开的工作、等待处理或完成的 pane 每帧发送一次 API 请求，实际帧率受调用耗时影响。`⚠️` 每两帧切换亮灭，默认亮、灭各约 500 ms；`✅` 每四帧切换，默认亮、灭各约 1 秒。收起的条目使用相同图标但不闪动。可在插件配置目录的 `config.json` 设置 `{"intervalMs": 500}` 降低开销，允许 250–1000 ms，动画和闪烁会随之变慢，修改后 stop/start 生效。退出 Herdr 后下一次状态读取失败会结束动画进程；开启的插件在下次 Herdr 服务启动时自动启动。禁用插件前先执行 stop。
+默认帧间隔 250 ms，状态轮询间隔 1 秒；每个工作、等待处理或完成的 pane 每帧发送一次 API 请求，实际帧率受调用耗时影响。`⚠️` 每两帧切换亮灭，默认亮、灭各约 500 ms；`✅` 每四帧切换，默认亮、灭各约 1 秒。收起仅减少文字行数，不影响状态颜色、旋转或闪动。可在插件配置目录的 `config.json` 设置 `{"intervalMs": 500}` 降低开销，允许 250–1000 ms，动画和闪烁会随之变慢，修改后 stop/start 生效。退出 Herdr 后下一次状态读取失败会结束动画进程；开启的插件在下次 Herdr 服务启动时自动启动。禁用插件前先执行 stop。
 
 日志追加写入插件状态目录的 `spinner.log`，start/status 输出进程标识。后台子进程均隐藏窗口。停止失败或异常退出时，显示 metadata 最迟在最后一次更新后约 2 秒过期，状态位置会消失，避免留下过期状态。彻底停用插件时，将上述五个 token 换回 `"state_icon"` 并重载配置。
 
