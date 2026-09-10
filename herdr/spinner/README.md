@@ -4,7 +4,7 @@
 
 ## 契约与边界
 
-- 目标：在 Agents 面板的项目名前用单个状态位置替换原生圆点。`working` 显示黄色 `⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷` 动画；`blocked` 为闪动的 `⚠️`（U+26A0 U+FE0F）、`done` 为缓慢闪动的绿色 `✅`（U+2705）、`idle` 为灰色空心圆、`unknown` 为灰色小点。保留三行布局。
+- 目标：在 Agents 面板的项目名前用单个状态位置替换原生圆点。`working` 显示黄色 `⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷` 动画；`blocked` 为闪动的 `⚠︎`（U+26A0 U+FE0E）、`done` 为缓慢闪动的绿色 `✓`（U+2713）、`idle` 为灰色空心圆、`unknown` 为灰色小点。保留三行布局。
 - 输入：Herdr 注入的 `HERDR_SOCKET_PATH`、`HERDR_PLUGIN_CONFIG_DIR` 和 `HERDR_PLUGIN_STATE_DIR`；需要 Windows 和 Node.js，无 npm 依赖。直接通过 Windows named pipe 发送 Herdr 官方 JSON API 请求。
 - 输出：上报来源 `smartskill.spinner` 的状态及关注布局 metadata，TTL 为 2 秒；每次原子更新只保留一个状态标记。不改 agent 名、工作状态、标题或终端内容。
 - 状态：每秒读取一次真实状态；进入 `working` 旋转，进入 `blocked` 闪烁，进入 `done` 缓慢闪烁，其他状态显示静态标记。读取或更新失败时记录错误并退出，残余图标由 TTL 清除。
@@ -65,9 +65,9 @@ herdr plugin action invoke stop --plugin smartskill.spinner
 
 `herdr config check` 通过后执行 `herdr server reload-config`。
 
-`✅` 与 `⚠️` 使用 emoji 显示；彩色字形的实际颜色由终端和字体决定，单色回退使用 token 的 `fg`。熄灭时使用两个盲文空白字符（U+2800），按双格 emoji 保留项目名位置。
+`✓` 使用文本勾号，`⚠︎` 用 U+FE0E 请求文本字形，分别由 `spin_done` 的绿色与 `spin_blocked` 的红色 `fg` 染色。熄灭时使用一个盲文空白字符（U+2800），按单格文本符号保留项目名位置。
 
-默认帧间隔 250 ms，状态轮询间隔 1 秒；每个工作、等待处理或完成的 pane 每帧发送一次 API 请求，实际帧率受调用耗时影响。`⚠️` 每两帧切换亮灭，默认亮、灭各约 500 ms；`✅` 每四帧切换，默认亮、灭各约 1 秒。收起仅减少文字行数，不影响状态颜色、旋转或闪动。可在插件配置目录的 `config.json` 设置 `{"intervalMs": 500}` 降低开销，允许 250–1000 ms，动画和闪烁会随之变慢，修改后 stop/start 生效。退出 Herdr 后下一次状态读取失败会结束动画进程；开启的插件在下次 Herdr 服务启动时自动启动。禁用插件前先执行 stop。
+默认帧间隔 250 ms，状态轮询间隔 1 秒；每个工作、等待处理或完成的 pane 每帧发送一次 API 请求，实际帧率受调用耗时影响。`⚠︎` 每两帧切换亮灭，默认亮、灭各约 500 ms；`✓` 每四帧切换，默认亮、灭各约 1 秒。收起仅减少文字行数，不影响状态颜色、旋转或闪动。可在插件配置目录的 `config.json` 设置 `{"intervalMs": 500}` 降低开销，允许 250–1000 ms，动画和闪烁会随之变慢，修改后 stop/start 生效。退出 Herdr 后下一次状态读取失败会结束动画进程；开启的插件在下次 Herdr 服务启动时自动启动。禁用插件前先执行 stop。
 
 日志追加写入插件状态目录的 `spinner.log`，start/status 输出进程标识。后台子进程均隐藏窗口。停止失败或异常退出时，显示 metadata 最迟在最后一次更新后约 2 秒过期，状态位置会消失，避免留下过期状态。彻底停用插件时，将上述五个 token 换回 `"state_icon"` 并重载配置。
 
