@@ -28,12 +28,12 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   assert.deepEqual(writes.filter((params) => params.pane_id === "working").map((params) => params.tokens.spin), ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷", "⣾"]);
   assert.deepEqual(writes.filter((params) => params.pane_id === "blocked").map((params) => params.tokens.spin_blocked), ["⚠︎", "⚠︎", "\u2800", "\u2800", "⚠︎", "⚠︎", "\u2800", "\u2800", "⚠︎"]);
   assert(writes.every((params) => params.ttl_ms === 2000 && marks(params.tokens).length === 1));
-  assert.deepEqual(writes.filter((params) => params.pane_id === "done").map((params) => params.tokens.spin_done), ["✓", "✓", "✓", "✓", "\u2800", "\u2800", "\u2800", "\u2800", "✓"]);
+  assert.deepEqual(writes.filter((params) => params.pane_id === "done").map((params) => params.tokens.spin_done), ["✅", "✅", "✅", "✅", "\u2800\u2800", "\u2800\u2800", "\u2800\u2800", "\u2800\u2800", "✅"]);
   agents = [{ pane_id: "working", agent_status: "done" }];
   await animation.refresh();
   await animation.frame();
   assert.equal(writes.at(-1).tokens.spin, null);
-  assert(["✓", "\u2800"].includes(writes.at(-1).tokens.spin_done));
+  assert(["✅", "\u2800\u2800"].includes(writes.at(-1).tokens.spin_done));
   const count = writes.length;
   await animation.frame();
   assert.equal(writes.length, count + 1);
@@ -50,7 +50,7 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
   agents[0].agent_status = "done";
   await animation.refresh();
   await animation.frame();
-  assert(["✓", "\u2800"].includes(writes.at(-1).tokens.spin_done));
+  assert(["✅", "\u2800\u2800"].includes(writes.at(-1).tokens.spin_done));
   assert.equal(writes.at(-1).tokens.spin_blocked, null, "done clears the blinking dot");
   const doneCount = writes.length;
   await animation.frame();
@@ -145,5 +145,5 @@ const marks = (tokens) => Object.entries(tokens).filter(([key, value]) => key.st
     wireResponse = "invalid\n";
     await assert.rejects(callHerdr("ping", {}, endpoint), /JSON|Unexpected/);
   } finally { await new Promise((resolve) => server.close(resolve)); }
-  console.log("PASS: slow ✓, ⚠︎ blink, single status slot, ring frames, clear, fail-closed, interval validation, pipe protocol");
+  console.log("PASS: slow ✅, ⚠︎ blink, single status slot, ring frames, clear, fail-closed, interval validation, pipe protocol");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

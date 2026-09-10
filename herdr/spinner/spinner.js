@@ -9,7 +9,7 @@ const { createHash } = require("node:crypto");
 const { setTimeout: sleep } = require("node:timers/promises");
 const SOURCE = "smartskill.spinner";
 const FRAMES = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
-const STATIC_MARKS = { blocked: "\u26a0\ufe0e", done: "\u2713", idle: "○", unknown: "·" };
+const STATIC_MARKS = { blocked: "\u26a0\ufe0e", done: "\u2705", idle: "○", unknown: "·" };
 const EMPTY_TOKENS = Object.fromEntries(["spin", ...Object.keys(STATIC_MARKS).map((state) => `spin_${state}`)].map((key) => [key, null]));
 const TTL_MS = 2000;
 const EMPTY_LAYOUT = { focus_summary: null, focus_agent: null, parked_summary: null, parked_state: null };
@@ -120,9 +120,9 @@ function createAnimation(call, attention = { panes: [], expanded: true }) {
     },
     async frame() {
       const glyph = FRAMES[tick % FRAMES.length];
-      // One braille blank retains the text symbol slot during the off phase.
+      // Off phases retain one cell for text warning and two cells for completion emoji.
       const blockedGlyph = Math.floor(tick / 2) % 2 === 0 ? STATIC_MARKS.blocked : "\u2800";
-      const doneGlyph = Math.floor(tick++ / 4) % 2 === 0 ? STATIC_MARKS.done : "\u2800";
+      const doneGlyph = Math.floor(tick++ / 4) % 2 === 0 ? STATIC_MARKS.done : "\u2800\u2800";
       for (const pane of working) {
         await report(pane, glyph);
       }
