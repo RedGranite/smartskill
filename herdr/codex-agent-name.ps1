@@ -11,6 +11,14 @@ function Write-HookSuccess {
     [Console]::Out.WriteLine('{"continue":true,"suppressOutput":true}')
 }
 
+if (-not $SelfTest -and (
+    $env:HERDR_ENV -ne '1' -or
+    [string]::IsNullOrWhiteSpace($env:HERDR_PANE_ID)
+)) {
+    Write-HookSuccess
+    exit 0
+}
+
 function Get-PayloadValue {
     param(
         [object]$Payload,
@@ -100,11 +108,7 @@ try {
     }
     $paneId = $env:HERDR_PANE_ID
 
-    if (-not $SelfTest -and (
-        $env:HERDR_ENV -ne '1' -or
-        [string]::IsNullOrWhiteSpace($paneId) -or
-        [string]::IsNullOrWhiteSpace($model)
-    )) {
+    if (-not $SelfTest -and [string]::IsNullOrWhiteSpace($model)) {
         Write-HookSuccess
         exit 0
     }
